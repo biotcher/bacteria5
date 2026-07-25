@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>항생제 내성 세균의 출현과 자연선택 모의 실험</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol";
+            background-color: #ffffff;
+            color: #37352f;
+        }
+
+        /* Notion-like Styles */
+        .notion-app {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .notion-sidebar {
+            width: 240px;
+            background-color: #f7f7f5;
+            border-right: 1px solid rgba(55, 53, 47, 0.09);
+            padding-top: 12px;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.3s ease;
+        }
+
+        .notion-content {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 40px 60px;
+            position: relative;
+        }
+
+        .notion-nav-item {
+            padding: 8px 14px;
+            margin: 2px 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            font-size: 14px;
+            font-weight: 500;
+            color: rgba(55, 53, 47, 0.65);
+            transition: background-color 0.1s ease;
+        }
+
+        .notion-nav-item:hover {
+            background-color: rgba(55, 53, 47, 0.08);
+        }
+
+        .notion-nav-item.active {
+            background-color: rgba(55, 53, 47, 0.08);
+            color: #37352f;
+            font-weight: 600;
+        }
+
+        .notion-nav-icon {
+            margin-right: 8px;
+            width: 18px;
+            height: 18px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Mobile Sidebar Overlay */
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.3);
+            z-index: 40;
+        }
+
+        @media (max-width: 768px) {
+            .notion-sidebar {
+                position: fixed;
+                z-index: 50;
+                transform: translateX(-100%);
+                height: 100%;
+            }
+            .notion-sidebar.open {
+                transform: translateX(0);
+            }
+            .sidebar-overlay.open {
+                display: block;
+            }
+            .notion-content {
+                padding: 20px;
+            }
+        }
+
+        /* Typography */
+        h1 { font-size: 40px; font-weight: 700; margin-bottom: 24px; letter-spacing: -0.02em; line-height: 1.2; }
+        h2 { font-size: 30px; font-weight: 600; margin-top: 32px; margin-bottom: 16px; border-bottom: 1px solid rgba(55, 53, 47, 0.09); padding-bottom: 8px; }
+        h3 { font-size: 24px; font-weight: 600; margin-top: 24px; margin-bottom: 12px; }
+        p { margin-bottom: 16px; line-height: 1.6; color: #37352f; }
+
+        /* Simulation Canvas Styles */
+        #simulation-container {
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto 24px auto;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid rgba(55, 53, 47, 0.16);
+            background-color: #fcfcfc;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: auto;
+            aspect-ratio: 16/9;
+            background-color: #e5e7eb;
+        }
+
+        /* Controls */
+        .controls-panel {
+            background-color: #f7f7f5;
+            padding: 16px;
+            border-top: 1px solid rgba(55, 53, 47, 0.09);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid rgba(55, 53, 47, 0.16);
+            background: white;
+        }
+        .btn:hover { background-color: rgba(55, 53, 47, 0.04); }
+        .btn-primary {
+            background-color: #2383e2;
+            color: white;
+            border-color: #2383e2;
+        }
+        .btn-primary:hover { background-color: #0077d4; }
+        .btn-danger {
+            background-color: #eb5757;
+            color: white;
+            border-color: #eb5757;
+        }
+        .btn-danger:hover { background-color: #e03131; }
+
+        /* Dashboard Styles */
+        .stat-card {
+            background: white;
+            border: 1px solid rgba(55, 53, 47, 0.09);
+            border-radius: 8px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+        }
+        .stat-value { font-size: 24px; font-weight: 700; color: #2383e2; }
+        .stat-label { font-size: 12px; color: rgba(55, 53, 47, 0.65); text-transform: uppercase; letter-spacing: 0.05em; }
+        
+        .student-row {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            border-bottom: 1px solid rgba(55, 53, 47, 0.09);
+        }
+        .student-row:last-child { border-bottom: none; }
+        .status-dot {
+            width: 8px; height: 8px; border-radius: 50%; margin-right: 12px;
+        }
+        .status-active { background-color: #4ade80; }
+        .status-idle { background-color: #fbbf24; }
+
+        /* Tabs */
+        .tab-container {
+            display: flex;
+            border-bottom: 1px solid rgba(55, 53, 47, 0.09);
+            margin-bottom: 24px;
+            overflow-x: auto;
+        }
+        .tab {
+            padding: 8px 16px;
+            cursor: pointer;
+            font-size: 14px;
+            color: rgba(55, 53, 47, 0.65);
+            border-bottom: 2px solid transparent;
+            white-space: nowrap;
+        }
+        .tab.active {
+            color: #37352f;
+            border-bottom-color: #37352f;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div class="notion-app">
+        <!-- Mobile Sidebar Overlay -->
+        <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+        <!-- Sidebar Navigation -->
+        <nav class="notion-sidebar" id="sidebar">
+            <div class="px-3 mb-6 mt-2 flex items-center justify-between">
+                <div class="flex items-center text-sm font-semibold text-gray-700">
+                    <span class="mr-2">🔬</span> 생명과학 I
+                </div>
+                <!-- Close btn for mobile -->
+                <button id="close-sidebar" class="md:hidden text-gray-500 hover:text-gray-700">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            
+            <div class="mb-4">
+                <div class="text-xs font-semibold text-gray-400 px-4 mb-2 uppercase tracking-wider">메뉴</div>
+                <div class="notion-nav-item active" onclick="showPage('home')">
+                    <span class="notion-nav-icon">🏠</span> 홈
+                </div>
+                <div class="notion-nav-item" onclick="showPage('simulation')">
+                    <span class="notion-nav-icon">🧪</span> 실험실 (모의실험)
+                </div>
+                <div class="notion-nav-item" onclick="showPage('dashboard')">
+                    <span class="notion-nav-icon">📊</span> 교사용 대시보드
+                </div>
+                <div class="notion-nav-item" onclick="showPage('materials')">
+                    <span class="notion-nav-icon">📚</span> 학습 자료실
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="notion-content" id="main-content">
+            <!-- Mobile Menu Button -->
+            <div class="md:hidden absolute top-4 left-4 z-10">
+                <button id="open-sidebar" class="p-2 bg-white rounded-md shadow-sm border border-gray-200 text-gray-600 hover:bg-gray-50">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                </button>
+            </div>
+
+            <!-- 1. Home Page -->
+            <div id="page-home" class="page-section">
+                <!-- Cover Image Placeholder (Gradient) -->
+                <div class="h-48 md:h-64 rounded-lg mb-8" style="background: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%); display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden;">
+                    <!-- Simple CSS Animation for Bacteria -->
+                    <div style="position: absolute; width: 100%; height: 100%;">
+                        <div style="position: absolute; top: 20%; left: 10%; width: 20px; height: 10px; background: rgba(255,255,255,0.7); border-radius: 10px; animation: float 6s infinite ease-in-out;"></div>
+                        <div style="position: absolute; top: 60%; left: 80%; width: 30px; height: 15px; background: rgba(255,255,255,0.5); border-radius: 15px; animation: float 8s infinite ease-in-out reverse;"></div>
+                        <div style="position: absolute; top: 80%; left: 30%; width: 15px; height: 8px; background: rgba(255,100,100,0.8); border-radius: 10px; animation: float 5s infinite ease-in-out;"></div>
+                    </div>
+                    <style>
+                        @keyframes float {
+                            0% { transform: translateY(0px) rotate(0deg); }
+                            50% { transform: translateY(-20px) rotate(10deg); }
+                            100% { transform: translateY(0px) rotate(0deg); }
+                        }
+                    </style>
+                    <h1 class="text-white text-center text-3xl md:text-5xl font-bold shadow-sm z-10 px-4" style="text-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                        항생제 내성 세균의 출현과<br>자연선택 모의 실험
+                    </h1>
+                </div>
+
+                <div class="max-w-3xl mx-auto">
+                    <p class="text-xl text-gray-600 mb-8 leading-relaxed">
+                        이 프로젝트는 고등학교 1학년 통합과학 및 생명과학 시간에 다루는 <strong>'자연선택에 의한 진화'</strong> 개념을 시각적으로 이해하기 위해 제작되었습니다. 항생제 환경에서 세균 집단이 어떻게 변화하는지 직접 실험해 보세요.
+                    </p>
+
+                    <h2>📌 탐구 목표</h2>
+                    <ul class="list-disc pl-6 mb-6 space-y-2">
+                        <li>변이: 세균 집단 내에 항생제 내성에 대한 다양한 변이가 존재함을 이해한다.</li>
+                        <li>자연선택: 환경 변화(항생제 사용)가 특정 변이를 가진 개체에게 유리하게 작용함을 설명할 수 있다.</li>
+                        <li>진화: 여러 세대를 거치며 내성 세균의 비율이 증가하는 현상을 관찰하고, 이를 자연선택의 결과로 해석할 수 있다.</li>
+                    </ul>
+
+                    <h2>🗓️ 진행 일정</h2>
+                    <div class="bg-gray-50 border border-gray-200 rounded-md p-4 mb-8">
+                        <div class="flex flex-col sm:flex-row border-b border-gray-200 pb-2 mb-2">
+                            <div class="font-semibold w-24 flex-shrink-0 text-gray-500">1차시</div>
+                            <div>이론 학습 (다윈의 진화론, 항생제 내성의 원리)</div>
+                        </div>
+                        <div class="flex flex-col sm:flex-row border-b border-gray-200 pb-2 mb-2">
+                            <div class="font-semibold w-24 flex-shrink-0 text-gray-500">2차시</div>
+                            <div><strong>모의 실험 진행 및 데이터 수집 (본 웹앱 활용)</strong></div>
+                        </div>
+                        <div class="flex flex-col sm:flex-row">
+                            <div class="font-semibold w-24 flex-shrink-0 text-gray-500">3차시</div>
+                            <div>결과 분석 및 탐구 보고서 작성</div>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-primary w-full md:w-auto text-lg py-3 px-8" onclick="showPage('simulation')">
+                        모의 실험 시작하기 🚀
+                    </button>
+                </div>
+            </div>
+
+            <!-- 2. Simulation Page -->
+            <div id="page-simulation" class="page-section hidden">
+                <div class="max-w-4xl mx-auto">
+                    <h1>🧪 실험실: 세균 배양 접시</h1>
+                    
+                    <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded-r-md">
+                        <p class="text-sm text-blue-800 m-0">
+                            <strong>실험 방법:</strong> '세포 분열'을 눌러 세균을 증식시킵니다. 간혹 돌연변이(빨간색)가 발생합니다. '항생제 투여'를 눌러 환경을 변화시킨 후, 생존한 세균들이 다음 세대에 어떻게 번식하는지 관찰하세요.
+                        </p>
+                    </div>
+
+                    <div id="simulation-container">
+                        <!-- Canvas for 2D Rendering -->
+                        <canvas id="sim-canvas"></canvas>
+                        
+                        <!-- Controls -->
+                        <div class="controls-panel">
+                            <div class="flex space-x-2 mr-auto">
+                                <span class="text-sm text-gray-500 flex items-center"><span class="w-3 h-3 rounded-full bg-blue-400 inline-block mr-1"></span>일반 세균</span>
+                                <span class="text-sm text-gray-500 flex items-center ml-3"><span class="w-3 h-3 rounded-full bg-red-500 inline-block mr-1"></span>내성 세균</span>
+                            </div>
+                            
+                            <div class="flex space-x-2">
+                                <span class="text-sm font-semibold bg-gray-200 px-2 py-1 rounded">세대: <span id="gen-counter">1</span></span>
+                                <span class="text-sm font-semibold bg-gray-200 px-2 py-1 rounded">총 개체수: <span id="pop-counter">10</span></span>
+                            </div>
+
+                            <button id="btn-reproduce" class="btn">🦠 세포 분열 (번식)</button>
+                            <button id="btn-antibiotic" class="btn btn-danger">💊 항생제 투여</button>
+                            <button id="btn-reset" class="btn">🔄 초기화</button>
+                        </div>
+                    </div>
+
+                    <!-- Data Tracking (Mock UI for student observation) -->
+                    <h3 class="mt-8">📊 관찰 기록</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse border border-gray-200">
+                            <thead>
+                                <tr class="bg-gray-50">
+                                    <th class="border border-gray-200 p-2 text-sm font-medium text-gray-600">세대</th>
+                                    <th class="border border-gray-200 p-2 text-sm font-medium text-gray-600">총 개체수</th>
+                                    <th class="border border-gray-200 p-2 text-sm font-medium text-gray-600">일반 세균 수</th>
+                                    <th class="border border-gray-200 p-2 text-sm font-medium text-gray-600">내성 세균 수 (돌연변이)</th>
+                                    <th class="border border-gray-200 p-2 text-sm font-medium text-gray-600">내성 세균 비율(%)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="data-table-body">
+                                <tr>
+                                    <td class="border border-gray-200 p-2 text-sm">1</td>
+                                    <td class="border border-gray-200 p-2 text-sm">10</td>
+                                    <td class="border border-gray-200 p-2 text-sm">10</td>
+                                    <td class="border border-gray-200 p-2 text-sm">0</td>
+                                    <td class="border border-gray-200 p-2 text-sm">0%</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Teacher Dashboard Page -->
+            <div id="page-dashboard" class="page-section hidden">
+                <div class="max-w-5xl mx-auto">
+                    <h1>📊 교사용 대시보드 (실시간 모니터링)</h1>
+                    <p class="text-gray-500 mb-6">학생들의 실험 진행 상황과 결과를 실시간으로 확인합니다.</p>
+
+                    <!-- Summary Stats -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                        <div class="stat-card">
+                            <span class="stat-label">현재 접속 학생</span>
+                            <span class="stat-value">24 / 30</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-label">실험 완료 비율</span>
+                            <span class="stat-value">65%</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-label">평균 도달 세대 수</span>
+                            <span class="stat-value">8.4 세대</span>
+                        </div>
+                    </div>
+
+                    <!-- Student List Mockup -->
+                    <h3>👨‍🎓 학생별 진행 현황</h3>
+                    <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                        <div class="flex items-center justify-between p-4 bg-gray-50 border-b border-gray-200 text-sm font-medium text-gray-600">
+                            <div class="w-1/3">이름 (모둠)</div>
+                            <div class="w-1/3 text-center">현재 상태</div>
+                            <div class="w-1/3 text-right">내성 세균 출현 세대</div>
+                        </div>
+                        
+                        <!-- Mock Student Rows -->
+                        <div class="student-row">
+                            <div class="w-1/3 font-medium">김민준 (1모둠)</div>
+                            <div class="w-1/3 flex justify-center items-center">
+                                <div class="status-dot status-active"></div> <span class="text-sm">실험 진행중 (5세대)</span>
+                            </div>
+                            <div class="w-1/3 text-right text-gray-500">2세대</div>
+                        </div>
+                        <div class="student-row">
+                            <div class="w-1/3 font-medium">이서윤 (1모둠)</div>
+                            <div class="w-1/3 flex justify-center items-center">
+                                <div class="status-dot status-active"></div> <span class="text-sm">실험 진행중 (7세대)</span>
+                            </div>
+                            <div class="w-1/3 text-right text-gray-500">3세대</div>
+                        </div>
+                        <div class="student-row">
+                            <div class="w-1/3 font-medium">박도현 (2모둠)</div>
+                            <div class="w-1/3 flex justify-center items-center">
+                                <div class="status-dot bg-blue-500"></div> <span class="text-sm">실험 완료 (10세대)</span>
+                            </div>
+                            <div class="w-1/3 text-right text-gray-500">4세대</div>
+                        </div>
+                        <div class="student-row bg-red-50">
+                            <div class="w-1/3 font-medium">최지유 (2모둠)</div>
+                            <div class="w-1/3 flex justify-center items-center">
+                                <div class="status-dot status-idle"></div> <span class="text-sm">접속 대기</span>
+                            </div>
+                            <div class="w-1/3 text-right text-gray-400">-</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4 text-sm text-gray-500 text-center">
+                        * 이 대시보드는 시뮬레이션된 가상 데이터를 보여줍니다. 실제 환경에서는 백엔드 서버와 소켓 통신을 통해 실시간 연동됩니다.
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. Materials Page -->
+            <div id="page-materials" class="page-section hidden">
+                <div class="max-w-4xl mx-auto">
+                    <h1>📚 학습 자료실</h1>
+                    
+                    <!-- Tabs -->
+                    <div class="tab-container">
+                        <div class="tab active" onclick="switchTab('tab-video')">참고 영상</div>
+                        <div class="tab" onclick="switchTab('tab-doc')">활동지 및 읽기 자료</div>
+                    </div>
+
+                    <!-- Tab Contents -->
+                    <div id="tab-video" class="tab-content">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <!-- YouTube Embed Mockup 1 -->
+                            <div class="border border-gray-200 rounded-lg overflow-hidden">
+                                <div class="aspect-w-16 aspect-h-9 bg-gray-200 flex items-center justify-center h-48">
+                                    <span class="text-gray-500">YouTube 영상 (자연선택의 원리)</span>
+                                </div>
+                                <div class="p-4 bg-white">
+                                    <h4 class="font-bold mb-1">EBS 생명과학 - 자연선택이란?</h4>
+                                    <p class="text-sm text-gray-600">다윈의 핀치새부터 현대의 항생제 내성까지.</p>
+                                </div>
+                            </div>
+                            <!-- YouTube Embed Mockup 2 -->
+                            <div class="border border-gray-200 rounded-lg overflow-hidden">
+                                <div class="aspect-w-16 aspect-h-9 bg-gray-200 flex items-center justify-center h-48">
+                                    <span class="text-gray-500">YouTube 영상 (항생제 오남용)</span>
+                                </div>
+                                <div class="p-4 bg-white">
+                                    <h4 class="font-bold mb-1">슈퍼박테리아의 경고</h4>
+                                    <p class="text-sm text-gray-600">왜 항생제를 처방받은 대로 끝까지 먹어야 할까?</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="tab-doc" class="tab-content hidden">
+                        <ul class="space-y-3">
+                            <li class="flex items-center p-3 border border-gray-200 rounded-md hover:bg-gray-50 cursor-pointer">
+                                <span class="mr-3 text-xl">📄</span>
+                                <div>
+                                    <div class="font-medium">탐구 활동지 (학생용)</div>
+                                    <div class="text-xs text-gray-500">PDF 형식, 2.1MB</div>
+                                </div>
+                                <button class="ml-auto text-blue-500 text-sm font-medium">다운로드</button>
+                            </li>
+                            <li class="flex items-center p-3 border border-gray-200 rounded-md hover:bg-gray-50 cursor-pointer">
+                                <span class="mr-3 text-xl">📰</span>
+                                <div>
+                                    <div class="font-medium">읽기 자료: 플레밍과 페니실린의 발견</div>
+                                    <div class="text-xs text-gray-500">PDF 형식, 1.5MB</div>
+                                </div>
+                                <button class="ml-auto text-blue-500 text-sm font-medium">다운로드</button>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        // --- UI Navigation Logic ---
+        function showPage(pageId) {
+            // Hide all pages
+            document.querySelectorAll('.page-section').forEach(el => el.classList.add('hidden'));
+            // Show selected page
+            document.getElementById(`page-${pageId}`).classList.remove('hidden');
+            
+            // Update active state in sidebar
+            document.querySelectorAll('.notion-nav-item').forEach(el => el.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+
+            // Close mobile sidebar if open
+            if(window.innerWidth <= 768) {
+                document.getElementById('sidebar').classList.remove('open');
+                document.getElementById('sidebar-overlay').classList.remove('open');
+            }
+
+            // Initialize simulation only when its page is opened for the first time
+            if (pageId === 'simulation' && !simInitialized) {
+                initSimulation();
+                simInitialized = true;
+            }
+        }
+
+        // Mobile Sidebar Toggle
+        document.getElementById('open-sidebar').addEventListener('click', () => {
+            document.getElementById('sidebar').classList.add('open');
+            document.getElementById('sidebar-overlay').classList.add('open');
+        });
+
+        document.getElementById('close-sidebar').addEventListener('click', () => {
+            document.getElementById('sidebar').classList.remove('open');
+            document.getElementById('sidebar-overlay').classList.remove('open');
+        });
+
+        document.getElementById('sidebar-overlay').addEventListener('click', () => {
+            document.getElementById('sidebar').classList.remove('open');
+            document.getElementById('sidebar-overlay').classList.remove('open');
+        });
+
+        // Tab Switching Logic in Materials Page
+        function switchTab(tabId) {
+            // Hide all contents
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            // Remove active class from tabs
+            document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+            
+            // Show selected content
+            document.getElementById(tabId).classList.remove('hidden');
+            // Add active class to clicked tab
+            event.currentTarget.classList.add('active');
+        }
+
+
+        // --- Simulation Logic (Canvas 2D) ---
+        let simInitialized = false;
+        const canvas = document.getElementById('sim-canvas');
+        const ctx = canvas.getContext('2d');
+        
+        let bacteria = [];
+        let generation = 1;
+        let animationId;
+        const INITIAL_POP = 10;
+        const MAX_POP = 200; // Capacity limit
+        const MUTATION_RATE = 0.05; // 5% chance of mutation during reproduction
+
+        // Bacteria Class
+        class Bacterium {
+            constructor(x, y, isResistant = false) {
+                this.x = x;
+                this.y = y;
+                // Random target for movement
+                this.tx = x + (Math.random() - 0.5) * 40;
+                this.ty = y + (Math.random() - 0.5) * 40;
+                this.isResistant = isResistant;
+                this.radius = 4;
+                this.speed = 0.5;
+                // Jiggle offset
+                this.jx = 0;
+                this.jy = 0;
+            }
+
+            draw(ctx) {
+                ctx.beginPath();
+                // Draw pill shape (simplified as circle for performance, but let's make it slightly oval)
+                ctx.ellipse(this.x + this.jx, this.y + this.jy, this.radius * 1.5, this.radius, Math.PI / 4, 0, Math.PI * 2);
+                ctx.fillStyle = this.isResistant ? '#ef4444' : '#60a5fa'; // Red for resistant, Blue for normal
+                ctx.fill();
+                
+                // Add a small outline for depth
+                ctx.strokeStyle = 'rgba(0,0,0,0.1)';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            }
+
+            update(width, height) {
+                // Move towards target
+                let dx = this.tx - this.x;
+                let dy = this.ty - this.y;
+                let dist = Math.sqrt(dx*dx + dy*dy);
+                
+                if (dist > 1) {
+                    this.x += (dx / dist) * this.speed;
+                    this.y += (dy / dist) * this.speed;
+                } else {
+                    // Pick new target within bounds
+                    this.tx = Math.max(10, Math.min(width - 10, this.x + (Math.random() - 0.5) * 60));
+                    this.ty = Math.max(10, Math.min(height - 10, this.y + (Math.random() - 0.5) * 60));
+                }
+
+                // Brownian motion jiggle
+                this.jx = (Math.random() - 0.5) * 2;
+                this.jy = (Math.random() - 0.5) * 2;
+                
+                // Keep inside canvas
+                this.x = Math.max(10, Math.min(width - 10, this.x));
+                this.y = Math.max(10, Math.min(height - 10, this.y));
+            }
+        }
+
+        function resizeCanvas() {
+            // Make canvas responsive
+            const container = document.getElementById('simulation-container');
+            canvas.width = container.clientWidth;
+            canvas.height = canvas.width * (9/16); // 16:9 aspect ratio
+        }
+
+        function initSimulation() {
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+            
+            resetSimulation();
+            
+            // Event Listeners for Controls
+            document.getElementById('btn-reproduce').addEventListener('click', reproduce);
+            document.getElementById('btn-antibiotic').addEventListener('click', applyAntibiotic);
+            document.getElementById('btn-reset').addEventListener('click', resetSimulation);
+
+            // Start Loop
+            animate();
+        }
+
+        function resetSimulation() {
+            bacteria = [];
+            generation = 1;
+            
+            // Create initial population in the center area
+            for (let i = 0; i < INITIAL_POP; i++) {
+                let bx = canvas.width/2 + (Math.random() - 0.5) * 100;
+                let by = canvas.height/2 + (Math.random() - 0.5) * 100;
+                bacteria.push(new Bacterium(bx, by, false)); // All start as normal
+            }
+            
+            updateDashboard();
+            resetTable();
+        }
+
+        function reproduce() {
+            if (bacteria.length >= MAX_POP) {
+                // Cannot reproduce beyond capacity, visually show error but keep it simple
+                const btn = document.getElementById('btn-reproduce');
+                const origText = btn.innerText;
+                btn.innerText = "배양 접시 포화!";
+                btn.classList.add('bg-orange-200');
+                setTimeout(() => { 
+                    btn.innerText = origText; 
+                    btn.classList.remove('bg-orange-200');
+                }, 1000);
+                return;
+            }
+
+            generation++;
+            let newBacteria = [];
+            
+            // Each bacterium tries to reproduce
+            for (let b of bacteria) {
+                // If we hit capacity, stop reproducing
+                if (bacteria.length + newBacteria.length >= MAX_POP) break;
+                
+                // Offspring inherits resistance, but has mutation chance if not already resistant
+                let isOffspringResistant = b.isResistant;
+                if (!b.isResistant && Math.random() < MUTATION_RATE) {
+                    isOffspringResistant = true; // Mutation occurs!
+                }
+
+                // Offspring spawns near parent
+                let nx = b.x + (Math.random() - 0.5) * 20;
+                let ny = b.y + (Math.random() - 0.5) * 20;
+                newBacteria.push(new Bacterium(nx, ny, isOffspringResistant));
+            }
+            
+            bacteria = bacteria.concat(newBacteria);
+            updateDashboard();
+            recordData();
+        }
+
+        function applyAntibiotic() {
+            // Visual effect: Flash background
+            const originalBg = canvas.style.backgroundColor;
+            canvas.style.backgroundColor = '#fecaca'; // light red
+            setTimeout(() => { canvas.style.backgroundColor = originalBg; }, 300);
+
+            // Filter bacteria: Normal die (mostly), Resistant survive
+            bacteria = bacteria.filter(b => {
+                if (b.isResistant) {
+                    return true; // 100% survival for resistant
+                } else {
+                    return Math.random() < 0.1; // 10% survival for normal (chance)
+                }
+            });
+            
+            updateDashboard();
+            // Don't advance generation, just record the environment change state
+        }
+
+        function updateDashboard() {
+            document.getElementById('gen-counter').innerText = generation;
+            document.getElementById('pop-counter').innerText = bacteria.length;
+        }
+
+        function resetTable() {
+            const tbody = document.getElementById('data-table-body');
+            tbody.innerHTML = '';
+            recordData(true); // Record initial state
+        }
+
+        function recordData(isInitial = false) {
+            const normalCount = bacteria.filter(b => !b.isResistant).length;
+            const resCount = bacteria.filter(b => b.isResistant).length;
+            const total = bacteria.length;
+            const resPercent = total === 0 ? 0 : Math.round((resCount / total) * 100);
+
+            const tbody = document.getElementById('data-table-body');
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td class="border border-gray-200 p-2 text-sm">${generation}</td>
+                <td class="border border-gray-200 p-2 text-sm">${total}</td>
+                <td class="border border-gray-200 p-2 text-sm text-blue-600 font-medium">${normalCount}</td>
+                <td class="border border-gray-200 p-2 text-sm text-red-500 font-medium">${resCount}</td>
+                <td class="border border-gray-200 p-2 text-sm font-bold ${resPercent > 50 ? 'text-red-500' : ''}">${resPercent}%</td>
+            `;
+            
+            if (isInitial) {
+                tbody.appendChild(row);
+            } else {
+                tbody.insertBefore(row, tbody.firstChild);
+            }
+        }
+
+        function animate() {
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Update and draw bacteria
+            for (let b of bacteria) {
+                b.update(canvas.width, canvas.height);
+                b.draw(ctx);
+            }
+            
+            animationId = requestAnimationFrame(animate);
+        }
+
+    </script>
+</body>
+</html>
