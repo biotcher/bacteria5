@@ -273,23 +273,31 @@
     <!-- Firebase SDK 로드 -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-analytics.js";
         import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, onSnapshot, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const appId = 'sim-evolution-app';
         
-        // 👇 선생님께서 전달해주실 Firebase config 값을 여기에 넣을 예정입니다.
-        let firebaseConfig = {
-            // 여기에 값을 입력받아 업데이트합니다.
+        // 새로 전달해주신 bacteria5 Firebase config 값을 적용했습니다.
+        const firebaseConfig = {
+            apiKey: "AIzaSyAtDjAIZtE3yZSDtEjTeA7U9HdtgvSvBMo",
+            authDomain: "bacteria5.firebaseapp.com",
+            projectId: "bacteria5",
+            storageBucket: "bacteria5.firebasestorage.app",
+            messagingSenderId: "663488599803",
+            appId: "1:663488599803:web:5d21b973ea23783a65025e"
         };
         
         let db, auth, currentUserId = null;
+        let analytics;
         let isFirebaseReady = false;
 
         // Firebase 초기화 시도
         try {
             if(Object.keys(firebaseConfig).length > 0 && firebaseConfig.apiKey) {
                 const app = initializeApp(firebaseConfig);
+                analytics = getAnalytics(app); // 애널리틱스 초기화 추가
                 db = getFirestore(app);
                 auth = getAuth(app);
                 initAuth();
