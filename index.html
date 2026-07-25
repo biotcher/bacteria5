@@ -3,365 +3,263 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>항생제 내성 세균의 출현과 자연선택 모의 실험</title>
+    <title>항생제 내성 세균 출현 모의 실험</title>
+    <!-- Tailwind CSS (노션 스타일 구현을 위한 스타일링 프레임워크) -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- 폰트 어썸 (아이콘) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
+        /* 노션 스타일 기본 폰트 및 설정 */
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol";
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, 'Helvetica Neue', 'Segoe UI', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+            color: #37352f;
             background-color: #ffffff;
-            color: #37352f;
         }
 
-        /* Notion-like Styles */
-        .notion-app {
-            display: flex;
-            height: 100vh;
-            overflow: hidden;
+        /* 메인 페이지 세균 애니메이션용 키프레임 */
+        @keyframes float {
+            0% { transform: translate(0, 0) rotate(0deg); }
+            33% { transform: translate(10px, -15px) rotate(10deg); }
+            66% { transform: translate(-10px, 15px) rotate(-10deg); }
+            100% { transform: translate(0, 0) rotate(0deg); }
         }
 
-        .notion-sidebar {
-            width: 240px;
-            background-color: #f7f7f5;
-            border-right: 1px solid rgba(55, 53, 47, 0.09);
-            padding-top: 12px;
-            display: flex;
-            flex-direction: column;
-            transition: transform 0.3s ease;
+        .bacteria-anim {
+            animation: float 6s infinite ease-in-out;
+            position: absolute;
+            border-radius: 9999px;
+            opacity: 0.8;
         }
 
-        .notion-content {
-            flex-grow: 1;
-            overflow-y: auto;
-            padding: 40px 60px;
-            position: relative;
+        /* 시뮬레이션 영역의 세균 디자인 */
+        .bug {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            transition: all 0.5s ease;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
         }
+        .bug.normal { background-color: #3b82f6; } /* 파란색: 일반 세균 */
+        .bug.resistant { background-color: #ef4444; } /* 빨간색: 내성 세균 */
 
-        .notion-nav-item {
-            padding: 8px 14px;
-            margin: 2px 8px;
-            border-radius: 6px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            font-size: 14px;
-            font-weight: 500;
-            color: rgba(55, 53, 47, 0.65);
-            transition: background-color 0.1s ease;
-        }
+        /* 사이드바 애니메이션 및 스크롤바 */
+        .sidebar-transition { transition: transform 0.3s ease-in-out; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #d7d7d5; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #b0b0b0; }
 
-        .notion-nav-item:hover {
-            background-color: rgba(55, 53, 47, 0.08);
-        }
-
-        .notion-nav-item.active {
-            background-color: rgba(55, 53, 47, 0.08);
-            color: #37352f;
-            font-weight: 600;
-        }
-
-        .notion-nav-icon {
-            margin-right: 8px;
-            width: 18px;
-            height: 18px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        /* Mobile Sidebar Overlay */
-        .sidebar-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: rgba(0, 0, 0, 0.3);
-            z-index: 40;
-        }
-
-        @media (max-width: 768px) {
-            .notion-sidebar {
-                position: fixed;
-                z-index: 50;
-                transform: translateX(-100%);
-                height: 100%;
-            }
-            .notion-sidebar.open {
-                transform: translateX(0);
-            }
-            .sidebar-overlay.open {
-                display: block;
-            }
-            .notion-content {
-                padding: 20px;
-            }
-        }
-
-        /* Typography */
-        h1 { font-size: 40px; font-weight: 700; margin-bottom: 24px; letter-spacing: -0.02em; line-height: 1.2; }
-        h2 { font-size: 30px; font-weight: 600; margin-top: 32px; margin-bottom: 16px; border-bottom: 1px solid rgba(55, 53, 47, 0.09); padding-bottom: 8px; }
-        h3 { font-size: 24px; font-weight: 600; margin-top: 24px; margin-bottom: 12px; }
-        p { margin-bottom: 16px; line-height: 1.6; color: #37352f; }
-
-        /* Simulation Canvas Styles */
-        #simulation-container {
-            width: 100%;
-            max-width: 800px;
-            margin: 0 auto 24px auto;
-            border-radius: 8px;
-            overflow: hidden;
-            border: 1px solid rgba(55, 53, 47, 0.16);
-            background-color: #fcfcfc;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        }
-        canvas {
-            display: block;
-            width: 100%;
-            height: auto;
-            aspect-ratio: 16/9;
-            background-color: #e5e7eb;
-        }
-
-        /* Controls */
-        .controls-panel {
-            background-color: #f7f7f5;
-            padding: 16px;
-            border-top: 1px solid rgba(55, 53, 47, 0.09);
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .btn {
-            padding: 6px 14px;
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            border: 1px solid rgba(55, 53, 47, 0.16);
-            background: white;
-        }
-        .btn:hover { background-color: rgba(55, 53, 47, 0.04); }
-        .btn-primary {
-            background-color: #2383e2;
-            color: white;
-            border-color: #2383e2;
-        }
-        .btn-primary:hover { background-color: #0077d4; }
-        .btn-danger {
-            background-color: #eb5757;
-            color: white;
-            border-color: #eb5757;
-        }
-        .btn-danger:hover { background-color: #e03131; }
-
-        /* Dashboard Styles */
-        .stat-card {
-            background: white;
-            border: 1px solid rgba(55, 53, 47, 0.09);
-            border-radius: 8px;
-            padding: 16px;
-            display: flex;
-            flex-direction: column;
-        }
-        .stat-value { font-size: 24px; font-weight: 700; color: #2383e2; }
-        .stat-label { font-size: 12px; color: rgba(55, 53, 47, 0.65); text-transform: uppercase; letter-spacing: 0.05em; }
-        
-        .student-row {
-            display: flex;
-            align-items: center;
-            padding: 12px;
-            border-bottom: 1px solid rgba(55, 53, 47, 0.09);
-        }
-        .student-row:last-child { border-bottom: none; }
-        .status-dot {
-            width: 8px; height: 8px; border-radius: 50%; margin-right: 12px;
-        }
-        .status-active { background-color: #4ade80; }
-        .status-idle { background-color: #fbbf24; }
-
-        /* Tabs */
-        .tab-container {
-            display: flex;
-            border-bottom: 1px solid rgba(55, 53, 47, 0.09);
-            margin-bottom: 24px;
-            overflow-x: auto;
-        }
-        .tab {
-            padding: 8px 16px;
-            cursor: pointer;
-            font-size: 14px;
-            color: rgba(55, 53, 47, 0.65);
-            border-bottom: 2px solid transparent;
-            white-space: nowrap;
-        }
-        .tab.active {
-            color: #37352f;
-            border-bottom-color: #37352f;
-            font-weight: 500;
-        }
+        /* 노션 스타일 버튼 호버 효과 */
+        .notion-btn:hover { background-color: rgba(55, 53, 47, 0.08); }
+        .notion-active { background-color: rgba(55, 53, 47, 0.08); font-weight: 600; }
     </style>
 </head>
-<body>
-    <div class="notion-app">
-        <!-- Mobile Sidebar Overlay -->
-        <div class="sidebar-overlay" id="sidebar-overlay"></div>
+<body class="flex h-screen overflow-hidden antialiased">
 
-        <!-- Sidebar Navigation -->
-        <nav class="notion-sidebar" id="sidebar">
-            <div class="px-3 mb-6 mt-2 flex items-center justify-between">
-                <div class="flex items-center text-sm font-semibold text-gray-700">
-                    <span class="mr-2">🔬</span> 생명과학 I
-                </div>
-                <!-- Close btn for mobile -->
-                <button id="close-sidebar" class="md:hidden text-gray-500 hover:text-gray-700">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                </button>
+    <!-- 모바일 배경 오버레이 -->
+    <div id="mobile-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden md:hidden" onclick="toggleSidebar()"></div>
+
+    <!-- 사이드바 (Navigation) -->
+    <aside id="sidebar" class="w-64 bg-[#f7f7f5] border-r border-[#e9e9e7] flex flex-col fixed md:relative z-50 h-full sidebar-transition -translate-x-full md:translate-x-0">
+        <div class="p-4 flex items-center justify-between">
+            <div class="font-bold text-sm text-gray-500 flex items-center gap-2">
+                <i class="fa-solid fa-flask text-blue-500"></i>
+                <span>생명과학 실험실</span>
             </div>
-            
-            <div class="mb-4">
-                <div class="text-xs font-semibold text-gray-400 px-4 mb-2 uppercase tracking-wider">메뉴</div>
-                <div class="notion-nav-item active" onclick="showPage('home')">
-                    <span class="notion-nav-icon">🏠</span> 홈
-                </div>
-                <div class="notion-nav-item" onclick="showPage('simulation')">
-                    <span class="notion-nav-icon">🧪</span> 실험실 (모의실험)
-                </div>
-                <div class="notion-nav-item" onclick="showPage('dashboard')">
-                    <span class="notion-nav-icon">📊</span> 교사용 대시보드
-                </div>
-                <div class="notion-nav-item" onclick="showPage('materials')">
-                    <span class="notion-nav-icon">📚</span> 학습 자료실
-                </div>
-            </div>
+            <button class="md:hidden text-gray-500 hover:text-gray-800" onclick="toggleSidebar()">
+                <i class="fa-solid fa-times"></i>
+            </button>
+        </div>
+        
+        <nav class="flex-1 overflow-y-auto py-2 px-3 space-y-1">
+            <div class="text-xs font-semibold text-gray-400 mb-2 mt-4 px-2">메뉴</div>
+            <a href="#" onclick="navigate('home')" id="nav-home" class="notion-active notion-btn flex items-center gap-3 px-2 py-1.5 rounded text-sm text-gray-700 w-full text-left transition-colors">
+                <i class="fa-solid fa-house w-4 text-center"></i>
+                <span>홈 (탐구 안내)</span>
+            </a>
+            <a href="#" onclick="navigate('simulation')" id="nav-simulation" class="notion-btn flex items-center gap-3 px-2 py-1.5 rounded text-sm text-gray-700 w-full text-left transition-colors">
+                <i class="fa-solid fa-microscope w-4 text-center"></i>
+                <span>학생 실험실</span>
+            </a>
+            <a href="#" onclick="navigate('dashboard')" id="nav-dashboard" class="notion-btn flex items-center gap-3 px-2 py-1.5 rounded text-sm text-gray-700 w-full text-left transition-colors">
+                <i class="fa-solid fa-chart-line w-4 text-center"></i>
+                <span>선생님 대시보드</span>
+            </a>
         </nav>
 
-        <!-- Main Content Area -->
-        <main class="notion-content" id="main-content">
-            <!-- Mobile Menu Button -->
-            <div class="md:hidden absolute top-4 left-4 z-10">
-                <button id="open-sidebar" class="p-2 bg-white rounded-md shadow-sm border border-gray-200 text-gray-600 hover:bg-gray-50">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
-                </button>
-            </div>
+        <div class="p-4 border-t border-[#e9e9e7] text-xs text-gray-400">
+            <p>고등학교 통합과학/생명과학</p>
+            <p>자연선택 모의실험 v1.0</p>
+        </div>
+    </aside>
 
-            <!-- 1. Home Page -->
-            <div id="page-home" class="page-section">
-                <!-- Cover Image Placeholder (Gradient) -->
-                <div class="h-48 md:h-64 rounded-lg mb-8" style="background: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%); display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden;">
-                    <!-- Simple CSS Animation for Bacteria -->
-                    <div style="position: absolute; width: 100%; height: 100%;">
-                        <div style="position: absolute; top: 20%; left: 10%; width: 20px; height: 10px; background: rgba(255,255,255,0.7); border-radius: 10px; animation: float 6s infinite ease-in-out;"></div>
-                        <div style="position: absolute; top: 60%; left: 80%; width: 30px; height: 15px; background: rgba(255,255,255,0.5); border-radius: 15px; animation: float 8s infinite ease-in-out reverse;"></div>
-                        <div style="position: absolute; top: 80%; left: 30%; width: 15px; height: 8px; background: rgba(255,100,100,0.8); border-radius: 10px; animation: float 5s infinite ease-in-out;"></div>
-                    </div>
-                    <style>
-                        @keyframes float {
-                            0% { transform: translateY(0px) rotate(0deg); }
-                            50% { transform: translateY(-20px) rotate(10deg); }
-                            100% { transform: translateY(0px) rotate(0deg); }
-                        }
-                    </style>
-                    <h1 class="text-white text-center text-3xl md:text-5xl font-bold shadow-sm z-10 px-4" style="text-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                        항생제 내성 세균의 출현과<br>자연선택 모의 실험
-                    </h1>
+    <!-- 메인 컨텐츠 영역 -->
+    <main class="flex-1 flex flex-col h-full overflow-hidden bg-white">
+        <!-- 모바일용 상단 바 -->
+        <header class="md:hidden flex items-center p-4 border-b border-[#e9e9e7]">
+            <button onclick="toggleSidebar()" class="text-gray-600 hover:bg-gray-100 p-1 rounded mr-3">
+                <i class="fa-solid fa-bars text-xl"></i>
+            </button>
+            <h1 class="font-bold text-gray-800 truncate" id="mobile-title">항생제 내성 세균 모의 실험</h1>
+        </header>
+
+        <!-- 컨텐츠 스크롤 영역 -->
+        <div class="flex-1 overflow-y-auto p-6 md:p-12 relative" id="content-area">
+            
+            <!-- 1. 홈 화면 (Home View) -->
+            <div id="view-home" class="max-w-3xl mx-auto block pb-20">
+                <!-- 헤더 영역 -->
+                <div class="flex items-center gap-3 mb-6">
+                    <span class="text-4xl">🦠</span>
+                    <h1 class="text-3xl md:text-4xl font-bold tracking-tight text-gray-900">항생제 내성 세균의 출현과 자연선택 모의 실험</h1>
                 </div>
 
-                <div class="max-w-3xl mx-auto">
-                    <p class="text-xl text-gray-600 mb-8 leading-relaxed">
-                        이 프로젝트는 고등학교 1학년 통합과학 및 생명과학 시간에 다루는 <strong>'자연선택에 의한 진화'</strong> 개념을 시각적으로 이해하기 위해 제작되었습니다. 항생제 환경에서 세균 집단이 어떻게 변화하는지 직접 실험해 보세요.
-                    </p>
+                <!-- 시각적 애니메이션 영역 -->
+                <div class="w-full h-48 bg-[#f7f7f5] rounded-lg border border-[#e9e9e7] mb-8 relative overflow-hidden flex items-center justify-center">
+                    <div class="absolute inset-0 z-0 opacity-20" style="background-image: radial-gradient(#d7d7d5 1px, transparent 1px); background-size: 20px 20px;"></div>
+                    <div class="z-10 text-center">
+                        <p class="text-sm text-gray-500 font-medium tracking-widest mb-2 uppercase">Evolution in Action</p>
+                        <p class="text-gray-700">환경 변화(항생제)에 의해 세균 집단의 형질이 어떻게 변하는지 관찰해 봅시다.</p>
+                    </div>
+                    <!-- 애니메이션 세균들 (JS로 동적 생성됨) -->
+                    <div id="anim-container" class="absolute inset-0 pointer-events-none"></div>
+                </div>
 
-                    <h2>📌 탐구 목표</h2>
-                    <ul class="list-disc pl-6 mb-6 space-y-2">
-                        <li>변이: 세균 집단 내에 항생제 내성에 대한 다양한 변이가 존재함을 이해한다.</li>
-                        <li>자연선택: 환경 변화(항생제 사용)가 특정 변이를 가진 개체에게 유리하게 작용함을 설명할 수 있다.</li>
-                        <li>진화: 여러 세대를 거치며 내성 세균의 비율이 증가하는 현상을 관찰하고, 이를 자연선택의 결과로 해석할 수 있다.</li>
+                <!-- 설명 영역 (노션 텍스트 스타일) -->
+                <div class="space-y-4 text-gray-700 leading-relaxed">
+                    <h2 class="text-xl font-bold border-b pb-2 mt-8 mb-4">📖 탐구 목표</h2>
+                    <ul class="list-disc pl-6 space-y-2">
+                        <li>항생제 사용 환경에서 내성 세균이 어떻게 자연선택 되는지 모의실험을 통해 설명할 수 있다.</li>
+                        <li>생물 다양성과 환경 변화의 관계를 이해한다.</li>
                     </ul>
 
-                    <h2>🗓️ 진행 일정</h2>
-                    <div class="bg-gray-50 border border-gray-200 rounded-md p-4 mb-8">
-                        <div class="flex flex-col sm:flex-row border-b border-gray-200 pb-2 mb-2">
-                            <div class="font-semibold w-24 flex-shrink-0 text-gray-500">1차시</div>
-                            <div>이론 학습 (다윈의 진화론, 항생제 내성의 원리)</div>
-                        </div>
-                        <div class="flex flex-col sm:flex-row border-b border-gray-200 pb-2 mb-2">
-                            <div class="font-semibold w-24 flex-shrink-0 text-gray-500">2차시</div>
-                            <div><strong>모의 실험 진행 및 데이터 수집 (본 웹앱 활용)</strong></div>
-                        </div>
-                        <div class="flex flex-col sm:flex-row">
-                            <div class="font-semibold w-24 flex-shrink-0 text-gray-500">3차시</div>
-                            <div>결과 분석 및 탐구 보고서 작성</div>
-                        </div>
+                    <h2 class="text-xl font-bold border-b pb-2 mt-8 mb-4">🧪 실험 방법 안내</h2>
+                    <div class="bg-gray-50 p-4 rounded border border-gray-100">
+                        <ol class="list-decimal pl-5 space-y-3 text-sm">
+                            <li>좌측 메뉴에서 <strong>[학생 실험실]</strong>로 이동합니다.</li>
+                            <li>본인의 <strong>이름(또는 모둠명)</strong>을 입력하고 실험을 시작합니다.</li>
+                            <li>초기 환경에는 일반 세균(파란색)이 대부분이고, 돌연변이로 인한 내성 세균(빨간색)이 소수 존재합니다.</li>
+                            <li><strong>[항생제 투여]</strong> 버튼을 누르면 일반 세균은 대부분 죽지만, 내성 세균은 살아남습니다.</li>
+                            <li><strong>[세균 번식]</strong> 버튼을 누르면 살아남은 세균들이 분열하여 증식합니다.</li>
+                            <li>위 과정을 반복하며 세균 집단의 색상(비율) 변화를 관찰합니다.</li>
+                        </ol>
                     </div>
-
-                    <button class="btn btn-primary w-full md:w-auto text-lg py-3 px-8" onclick="showPage('simulation')">
-                        모의 실험 시작하기 🚀
-                    </button>
                 </div>
             </div>
 
-            <!-- 2. Simulation Page -->
-            <div id="page-simulation" class="page-section hidden">
-                <div class="max-w-4xl mx-auto">
-                    <h1>🧪 실험실: 세균 배양 접시</h1>
-                    
-                    <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded-r-md">
-                        <p class="text-sm text-blue-800 m-0">
-                            <strong>실험 방법:</strong> '세포 분열'을 눌러 세균을 증식시킵니다. 간혹 돌연변이(빨간색)가 발생합니다. '항생제 투여'를 눌러 환경을 변화시킨 후, 생존한 세균들이 다음 세대에 어떻게 번식하는지 관찰하세요.
-                        </p>
+            <!-- 2. 학생 실험실 (Simulation View) -->
+            <div id="view-simulation" class="max-w-4xl mx-auto hidden pb-20">
+                <h1 class="text-3xl font-bold mb-2">🔬 학생 실험실</h1>
+                <p class="text-gray-500 mb-8 border-b pb-4">직접 항생제를 투여하고 세균이 번식하는 과정을 관찰하세요.</p>
+
+                <!-- 학생 이름 입력 (실험 전) -->
+                <div id="setup-section" class="bg-[#f7f7f5] p-6 rounded-lg border border-[#e9e9e7] mb-8 max-w-md">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">이름 또는 모둠명을 입력하세요</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="student-name" placeholder="예: 1학년 3반 1모둠" class="flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-shadow">
+                        <button onclick="startSimulation()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-medium transition-colors">실험 시작</button>
                     </div>
+                    <p class="text-xs text-gray-400 mt-2">* 입력한 이름으로 선생님 대시보드에 결과가 전송됩니다.</p>
+                </div>
 
-                    <div id="simulation-container">
-                        <!-- Canvas for 2D Rendering -->
-                        <canvas id="sim-canvas"></canvas>
+                <!-- 실험 영역 (실험 시작 후 표시) -->
+                <div id="simulation-section" class="hidden">
+                    <div class="flex flex-col md:flex-row gap-6">
                         
-                        <!-- Controls -->
-                        <div class="controls-panel">
-                            <div class="flex space-x-2 mr-auto">
-                                <span class="text-sm text-gray-500 flex items-center"><span class="w-3 h-3 rounded-full bg-blue-400 inline-block mr-1"></span>일반 세균</span>
-                                <span class="text-sm text-gray-500 flex items-center ml-3"><span class="w-3 h-3 rounded-full bg-red-500 inline-block mr-1"></span>내성 세균</span>
+                        <!-- 좌측: 시각적 배양 접시 -->
+                        <div class="flex-1">
+                            <div class="bg-white border-2 border-gray-200 rounded-full w-full aspect-square max-w-[400px] mx-auto relative overflow-hidden shadow-inner flex items-center justify-center bg-gray-50" id="petri-dish">
+                                <!-- 세균들이 여기에 생성됩니다 -->
                             </div>
-                            
-                            <div class="flex space-x-2">
-                                <span class="text-sm font-semibold bg-gray-200 px-2 py-1 rounded">세대: <span id="gen-counter">1</span></span>
-                                <span class="text-sm font-semibold bg-gray-200 px-2 py-1 rounded">총 개체수: <span id="pop-counter">10</span></span>
+                            <div class="flex justify-center gap-6 mt-4 text-sm font-medium">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-3 h-3 rounded-full bg-blue-500"></div> 일반 세균
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <div class="w-3 h-3 rounded-full bg-red-500"></div> 내성 세균
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 우측: 컨트롤 패널 및 데이터 -->
+                        <div class="w-full md:w-64 space-y-6">
+                            <!-- 현재 상태 카드 -->
+                            <div class="bg-white p-4 rounded border shadow-sm">
+                                <h3 class="font-bold text-lg mb-2 text-gray-800" id="sim-user-display">내 실험</h3>
+                                <div class="flex justify-between items-center mb-1 text-sm">
+                                    <span class="text-gray-500">현재 세대</span>
+                                    <span class="font-bold text-lg" id="stat-generation">1</span>
+                                </div>
+                                <div class="space-y-2 mt-4 text-sm">
+                                    <div class="flex justify-between">
+                                        <span class="text-blue-600 font-medium">일반 세균</span>
+                                        <span id="stat-normal">0</span>
+                                    </div>
+                                    <div class="w-full bg-gray-200 rounded-full h-1.5">
+                                        <div id="bar-normal" class="bg-blue-500 h-1.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+                                    </div>
+                                    
+                                    <div class="flex justify-between mt-2">
+                                        <span class="text-red-600 font-medium">내성 세균</span>
+                                        <span id="stat-resistant">0</span>
+                                    </div>
+                                    <div class="w-full bg-gray-200 rounded-full h-1.5">
+                                        <div id="bar-resistant" class="bg-red-500 h-1.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+                                    </div>
+                                </div>
                             </div>
 
-                            <button id="btn-reproduce" class="btn">🦠 세포 분열 (번식)</button>
-                            <button id="btn-antibiotic" class="btn btn-danger">💊 항생제 투여</button>
-                            <button id="btn-reset" class="btn">🔄 초기화</button>
+                            <!-- 조작 버튼 -->
+                            <div class="space-y-3">
+                                <button onclick="applyAntibiotic()" class="w-full bg-yellow-100 hover:bg-yellow-200 text-yellow-800 border border-yellow-300 py-3 rounded-lg font-bold shadow-sm transition-all flex items-center justify-center gap-2">
+                                    <i class="fa-solid fa-pills"></i> 항생제 투여
+                                </button>
+                                <button onclick="reproduceBacteria()" class="w-full bg-green-100 hover:bg-green-200 text-green-800 border border-green-300 py-3 rounded-lg font-bold shadow-sm transition-all flex items-center justify-center gap-2">
+                                    <i class="fa-solid fa-arrows-split-up-and-left"></i> 살아남은 세균 번식
+                                </button>
+                                <button onclick="resetSimulation()" class="w-full mt-4 text-gray-500 hover:text-gray-700 text-sm underline pt-2">
+                                    실험 처음부터 다시하기
+                                </button>
+                            </div>
                         </div>
                     </div>
+                </div>
+            </div>
 
-                    <!-- Data Tracking (Mock UI for student observation) -->
-                    <h3 class="mt-8">📊 관찰 기록</h3>
+            <!-- 3. 선생님 대시보드 (Dashboard View) -->
+            <div id="view-dashboard" class="max-w-5xl mx-auto hidden pb-20">
+                <div class="flex justify-between items-end mb-2">
+                    <h1 class="text-3xl font-bold">📊 선생님 대시보드</h1>
+                    <span class="flex h-3 w-3 relative">
+                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                      <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                      <span class="ml-2 text-xs text-gray-500 absolute left-4 -top-1 w-20">실시간 연동 중</span>
+                    </span>
+                </div>
+                <p class="text-gray-500 mb-8 border-b pb-4">학생들이 진행 중인 모의 실험 결과를 실시간으로 모니터링합니다.</p>
+
+                <div class="bg-white border rounded-lg overflow-hidden shadow-sm">
                     <div class="overflow-x-auto">
-                        <table class="w-full text-left border-collapse border border-gray-200">
-                            <thead>
-                                <tr class="bg-gray-50">
-                                    <th class="border border-gray-200 p-2 text-sm font-medium text-gray-600">세대</th>
-                                    <th class="border border-gray-200 p-2 text-sm font-medium text-gray-600">총 개체수</th>
-                                    <th class="border border-gray-200 p-2 text-sm font-medium text-gray-600">일반 세균 수</th>
-                                    <th class="border border-gray-200 p-2 text-sm font-medium text-gray-600">내성 세균 수 (돌연변이)</th>
-                                    <th class="border border-gray-200 p-2 text-sm font-medium text-gray-600">내성 세균 비율(%)</th>
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-[#f7f7f5] border-b text-gray-600 uppercase text-xs">
+                                <tr>
+                                    <th class="px-6 py-3 font-semibold">학생/모둠명</th>
+                                    <th class="px-6 py-3 font-semibold text-center">진행 세대</th>
+                                    <th class="px-6 py-3 font-semibold text-center">일반 세균 수</th>
+                                    <th class="px-6 py-3 font-semibold text-center">내성 세균 수</th>
+                                    <th class="px-6 py-3 font-semibold w-1/3">비율 그래프 (일반 vs 내성)</th>
+                                    <th class="px-6 py-3 font-semibold text-right">최근 업데이트</th>
                                 </tr>
                             </thead>
-                            <tbody id="data-table-body">
+                            <tbody id="dashboard-table-body" class="divide-y divide-gray-100">
+                                <!-- 데이터가 로딩 전일 때 표시 -->
                                 <tr>
-                                    <td class="border border-gray-200 p-2 text-sm">1</td>
-                                    <td class="border border-gray-200 p-2 text-sm">10</td>
-                                    <td class="border border-gray-200 p-2 text-sm">10</td>
-                                    <td class="border border-gray-200 p-2 text-sm">0</td>
-                                    <td class="border border-gray-200 p-2 text-sm">0%</td>
+                                    <td colspan="6" class="px-6 py-8 text-center text-gray-400">
+                                        <i class="fa-solid fa-spinner fa-spin mr-2"></i> 데이터를 불러오는 중이거나 아직 시작한 학생이 없습니다.
+                                    </td>
                                 </tr>
                             </tbody>
                         </table>
@@ -369,398 +267,357 @@
                 </div>
             </div>
 
-            <!-- 3. Teacher Dashboard Page -->
-            <div id="page-dashboard" class="page-section hidden">
-                <div class="max-w-5xl mx-auto">
-                    <h1>📊 교사용 대시보드 (실시간 모니터링)</h1>
-                    <p class="text-gray-500 mb-6">학생들의 실험 진행 상황과 결과를 실시간으로 확인합니다.</p>
+        </div>
+    </main>
 
-                    <!-- Summary Stats -->
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                        <div class="stat-card">
-                            <span class="stat-label">현재 접속 학생</span>
-                            <span class="stat-value">24 / 30</span>
-                        </div>
-                        <div class="stat-card">
-                            <span class="stat-label">실험 완료 비율</span>
-                            <span class="stat-value">65%</span>
-                        </div>
-                        <div class="stat-card">
-                            <span class="stat-label">평균 도달 세대 수</span>
-                            <span class="stat-value">8.4 세대</span>
-                        </div>
-                    </div>
+    <!-- Firebase SDK 로드 -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-                    <!-- Student List Mockup -->
-                    <h3>👨‍🎓 학생별 진행 현황</h3>
-                    <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
-                        <div class="flex items-center justify-between p-4 bg-gray-50 border-b border-gray-200 text-sm font-medium text-gray-600">
-                            <div class="w-1/3">이름 (모둠)</div>
-                            <div class="w-1/3 text-center">현재 상태</div>
-                            <div class="w-1/3 text-right">내성 세균 출현 세대</div>
-                        </div>
-                        
-                        <!-- Mock Student Rows -->
-                        <div class="student-row">
-                            <div class="w-1/3 font-medium">김민준 (1모둠)</div>
-                            <div class="w-1/3 flex justify-center items-center">
-                                <div class="status-dot status-active"></div> <span class="text-sm">실험 진행중 (5세대)</span>
-                            </div>
-                            <div class="w-1/3 text-right text-gray-500">2세대</div>
-                        </div>
-                        <div class="student-row">
-                            <div class="w-1/3 font-medium">이서윤 (1모둠)</div>
-                            <div class="w-1/3 flex justify-center items-center">
-                                <div class="status-dot status-active"></div> <span class="text-sm">실험 진행중 (7세대)</span>
-                            </div>
-                            <div class="w-1/3 text-right text-gray-500">3세대</div>
-                        </div>
-                        <div class="student-row">
-                            <div class="w-1/3 font-medium">박도현 (2모둠)</div>
-                            <div class="w-1/3 flex justify-center items-center">
-                                <div class="status-dot bg-blue-500"></div> <span class="text-sm">실험 완료 (10세대)</span>
-                            </div>
-                            <div class="w-1/3 text-right text-gray-500">4세대</div>
-                        </div>
-                        <div class="student-row bg-red-50">
-                            <div class="w-1/3 font-medium">최지유 (2모둠)</div>
-                            <div class="w-1/3 flex justify-center items-center">
-                                <div class="status-dot status-idle"></div> <span class="text-sm">접속 대기</span>
-                            </div>
-                            <div class="w-1/3 text-right text-gray-400">-</div>
-                        </div>
-                    </div>
-                    
-                    <div class="mt-4 text-sm text-gray-500 text-center">
-                        * 이 대시보드는 시뮬레이션된 가상 데이터를 보여줍니다. 실제 환경에서는 백엔드 서버와 소켓 통신을 통해 실시간 연동됩니다.
-                    </div>
-                </div>
-            </div>
-
-            <!-- 4. Materials Page -->
-            <div id="page-materials" class="page-section hidden">
-                <div class="max-w-4xl mx-auto">
-                    <h1>📚 학습 자료실</h1>
-                    
-                    <!-- Tabs -->
-                    <div class="tab-container">
-                        <div class="tab active" onclick="switchTab('tab-video')">참고 영상</div>
-                        <div class="tab" onclick="switchTab('tab-doc')">활동지 및 읽기 자료</div>
-                    </div>
-
-                    <!-- Tab Contents -->
-                    <div id="tab-video" class="tab-content">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <!-- YouTube Embed Mockup 1 -->
-                            <div class="border border-gray-200 rounded-lg overflow-hidden">
-                                <div class="aspect-w-16 aspect-h-9 bg-gray-200 flex items-center justify-center h-48">
-                                    <span class="text-gray-500">YouTube 영상 (자연선택의 원리)</span>
-                                </div>
-                                <div class="p-4 bg-white">
-                                    <h4 class="font-bold mb-1">EBS 생명과학 - 자연선택이란?</h4>
-                                    <p class="text-sm text-gray-600">다윈의 핀치새부터 현대의 항생제 내성까지.</p>
-                                </div>
-                            </div>
-                            <!-- YouTube Embed Mockup 2 -->
-                            <div class="border border-gray-200 rounded-lg overflow-hidden">
-                                <div class="aspect-w-16 aspect-h-9 bg-gray-200 flex items-center justify-center h-48">
-                                    <span class="text-gray-500">YouTube 영상 (항생제 오남용)</span>
-                                </div>
-                                <div class="p-4 bg-white">
-                                    <h4 class="font-bold mb-1">슈퍼박테리아의 경고</h4>
-                                    <p class="text-sm text-gray-600">왜 항생제를 처방받은 대로 끝까지 먹어야 할까?</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div id="tab-doc" class="tab-content hidden">
-                        <ul class="space-y-3">
-                            <li class="flex items-center p-3 border border-gray-200 rounded-md hover:bg-gray-50 cursor-pointer">
-                                <span class="mr-3 text-xl">📄</span>
-                                <div>
-                                    <div class="font-medium">탐구 활동지 (학생용)</div>
-                                    <div class="text-xs text-gray-500">PDF 형식, 2.1MB</div>
-                                </div>
-                                <button class="ml-auto text-blue-500 text-sm font-medium">다운로드</button>
-                            </li>
-                            <li class="flex items-center p-3 border border-gray-200 rounded-md hover:bg-gray-50 cursor-pointer">
-                                <span class="mr-3 text-xl">📰</span>
-                                <div>
-                                    <div class="font-medium">읽기 자료: 플레밍과 페니실린의 발견</div>
-                                    <div class="text-xs text-gray-500">PDF 형식, 1.5MB</div>
-                                </div>
-                                <button class="ml-auto text-blue-500 text-sm font-medium">다운로드</button>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-
-        </main>
-    </div>
-
-    <script>
-        // --- UI Navigation Logic ---
-        function showPage(pageId) {
-            // Hide all pages
-            document.querySelectorAll('.page-section').forEach(el => el.classList.add('hidden'));
-            // Show selected page
-            document.getElementById(`page-${pageId}`).classList.remove('hidden');
-            
-            // Update active state in sidebar
-            document.querySelectorAll('.notion-nav-item').forEach(el => el.classList.remove('active'));
-            event.currentTarget.classList.add('active');
-
-            // Close mobile sidebar if open
-            if(window.innerWidth <= 768) {
-                document.getElementById('sidebar').classList.remove('open');
-                document.getElementById('sidebar-overlay').classList.remove('open');
-            }
-
-            // Initialize simulation only when its page is opened for the first time
-            if (pageId === 'simulation' && !simInitialized) {
-                initSimulation();
-                simInitialized = true;
-            }
-        }
-
-        // Mobile Sidebar Toggle
-        document.getElementById('open-sidebar').addEventListener('click', () => {
-            document.getElementById('sidebar').classList.add('open');
-            document.getElementById('sidebar-overlay').classList.add('open');
-        });
-
-        document.getElementById('close-sidebar').addEventListener('click', () => {
-            document.getElementById('sidebar').classList.remove('open');
-            document.getElementById('sidebar-overlay').classList.remove('open');
-        });
-
-        document.getElementById('sidebar-overlay').addEventListener('click', () => {
-            document.getElementById('sidebar').classList.remove('open');
-            document.getElementById('sidebar-overlay').classList.remove('open');
-        });
-
-        // Tab Switching Logic in Materials Page
-        function switchTab(tabId) {
-            // Hide all contents
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-            // Remove active class from tabs
-            document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
-            
-            // Show selected content
-            document.getElementById(tabId).classList.remove('hidden');
-            // Add active class to clicked tab
-            event.currentTarget.classList.add('active');
-        }
-
-
-        // --- Simulation Logic (Canvas 2D) ---
-        let simInitialized = false;
-        const canvas = document.getElementById('sim-canvas');
-        const ctx = canvas.getContext('2d');
+        const appId = 'sim-evolution-app';
         
-        let bacteria = [];
-        let generation = 1;
-        let animationId;
-        const INITIAL_POP = 10;
-        const MAX_POP = 200; // Capacity limit
-        const MUTATION_RATE = 0.05; // 5% chance of mutation during reproduction
+        // 👇 선생님께서 전달해주실 Firebase config 값을 여기에 넣을 예정입니다.
+        let firebaseConfig = {
+            // 여기에 값을 입력받아 업데이트합니다.
+        };
+        
+        let db, auth, currentUserId = null;
+        let isFirebaseReady = false;
 
-        // Bacteria Class
-        class Bacterium {
-            constructor(x, y, isResistant = false) {
-                this.x = x;
-                this.y = y;
-                // Random target for movement
-                this.tx = x + (Math.random() - 0.5) * 40;
-                this.ty = y + (Math.random() - 0.5) * 40;
-                this.isResistant = isResistant;
-                this.radius = 4;
-                this.speed = 0.5;
-                // Jiggle offset
-                this.jx = 0;
-                this.jy = 0;
+        // Firebase 초기화 시도
+        try {
+            if(Object.keys(firebaseConfig).length > 0 && firebaseConfig.apiKey) {
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                initAuth();
+            } else {
+                console.warn("Firebase config is missing. App will run in local-only mode.");
+                // 로컬 모드일 때 대시보드에 안내 표시
+                document.getElementById('dashboard-table-body').innerHTML = `
+                    <tr><td colspan="6" class="px-6 py-8 text-center text-red-500 bg-red-50">
+                        <i class="fa-solid fa-triangle-exclamation mr-2"></i>
+                        현재 클라우드 데이터베이스가 연결되지 않아 학생들간의 실시간 연동이 불가능한 '로컬 모드'입니다. (본인의 결과만 임시로 보입니다)
+                    </td></tr>
+                `;
             }
+        } catch(e) { console.error("Firebase init failed:", e); }
 
-            draw(ctx) {
-                ctx.beginPath();
-                // Draw pill shape (simplified as circle for performance, but let's make it slightly oval)
-                ctx.ellipse(this.x + this.jx, this.y + this.jy, this.radius * 1.5, this.radius, Math.PI / 4, 0, Math.PI * 2);
-                ctx.fillStyle = this.isResistant ? '#ef4444' : '#60a5fa'; // Red for resistant, Blue for normal
-                ctx.fill();
-                
-                // Add a small outline for depth
-                ctx.strokeStyle = 'rgba(0,0,0,0.1)';
-                ctx.lineWidth = 1;
-                ctx.stroke();
-            }
-
-            update(width, height) {
-                // Move towards target
-                let dx = this.tx - this.x;
-                let dy = this.ty - this.y;
-                let dist = Math.sqrt(dx*dx + dy*dy);
-                
-                if (dist > 1) {
-                    this.x += (dx / dist) * this.speed;
-                    this.y += (dy / dist) * this.speed;
+        // 인증 초기화 (필수 규칙 준수)
+        async function initAuth() {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
                 } else {
-                    // Pick new target within bounds
-                    this.tx = Math.max(10, Math.min(width - 10, this.x + (Math.random() - 0.5) * 60));
-                    this.ty = Math.max(10, Math.min(height - 10, this.y + (Math.random() - 0.5) * 60));
+                    await signInAnonymously(auth);
                 }
-
-                // Brownian motion jiggle
-                this.jx = (Math.random() - 0.5) * 2;
-                this.jy = (Math.random() - 0.5) * 2;
+                currentUserId = auth.currentUser.uid;
+                isFirebaseReady = true;
                 
-                // Keep inside canvas
-                this.x = Math.max(10, Math.min(width - 10, this.x));
-                this.y = Math.max(10, Math.min(height - 10, this.y));
+                // 인증 성공 후 대시보드 실시간 리스너 등록
+                listenToSimulations();
+            } catch (error) {
+                console.error("Auth Error:", error);
             }
         }
 
-        function resizeCanvas() {
-            // Make canvas responsive
-            const container = document.getElementById('simulation-container');
-            canvas.width = container.clientWidth;
-            canvas.height = canvas.width * (9/16); // 16:9 aspect ratio
+        
+        // --- 시뮬레이션 상태 변수 ---
+        const MAX_BACTERIA = 100;
+        let simState = {
+            name: "",
+            generation: 1,
+            normal: 90,
+            resistant: 10,
+            isActive: false
+        };
+
+        // --- UI 네비게이션 제어 ---
+        window.navigate = function(viewId) {
+            // 모든 뷰 숨기기
+            document.getElementById('view-home').classList.add('hidden');
+            document.getElementById('view-simulation').classList.add('hidden');
+            document.getElementById('view-dashboard').classList.add('hidden');
+            
+            // 메뉴 활성화 상태 초기화
+            document.querySelectorAll('.notion-btn').forEach(btn => btn.classList.remove('notion-active'));
+            
+            // 선택된 뷰 표시 및 메뉴 활성화
+            document.getElementById('view-' + viewId).classList.remove('hidden');
+            document.getElementById('nav-' + viewId).classList.add('notion-active');
+            
+            // 모바일 사이드바 닫기
+            if(window.innerWidth < 768) toggleSidebar();
         }
 
-        function initSimulation() {
-            resizeCanvas();
-            window.addEventListener('resize', resizeCanvas);
+        window.toggleSidebar = function() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('mobile-overlay');
             
-            resetSimulation();
-            
-            // Event Listeners for Controls
-            document.getElementById('btn-reproduce').addEventListener('click', reproduce);
-            document.getElementById('btn-antibiotic').addEventListener('click', applyAntibiotic);
-            document.getElementById('btn-reset').addEventListener('click', resetSimulation);
-
-            // Start Loop
-            animate();
-        }
-
-        function resetSimulation() {
-            bacteria = [];
-            generation = 1;
-            
-            // Create initial population in the center area
-            for (let i = 0; i < INITIAL_POP; i++) {
-                let bx = canvas.width/2 + (Math.random() - 0.5) * 100;
-                let by = canvas.height/2 + (Math.random() - 0.5) * 100;
-                bacteria.push(new Bacterium(bx, by, false)); // All start as normal
+            if (sidebar.classList.contains('-translate-x-full')) {
+                sidebar.classList.remove('-translate-x-full');
+                overlay.classList.remove('hidden');
+            } else {
+                sidebar.classList.add('-translate-x-full');
+                overlay.classList.add('hidden');
             }
-            
-            updateDashboard();
-            resetTable();
         }
 
-        function reproduce() {
-            if (bacteria.length >= MAX_POP) {
-                // Cannot reproduce beyond capacity, visually show error but keep it simple
-                const btn = document.getElementById('btn-reproduce');
-                const origText = btn.innerText;
-                btn.innerText = "배양 접시 포화!";
-                btn.classList.add('bg-orange-200');
-                setTimeout(() => { 
-                    btn.innerText = origText; 
-                    btn.classList.remove('bg-orange-200');
-                }, 1000);
+        // --- 메인 페이지 애니메이션 설정 ---
+        function createHomeAnimation() {
+            const container = document.getElementById('anim-container');
+            container.innerHTML = '';
+            for(let i=0; i<30; i++) {
+                const el = document.createElement('div');
+                const isResistant = Math.random() > 0.8;
+                el.className = `bacteria-anim w-3 h-3 ${isResistant ? 'bg-red-400' : 'bg-blue-400'}`;
+                el.style.left = `${Math.random() * 100}%`;
+                el.style.top = `${Math.random() * 100}%`;
+                el.style.animationDelay = `${Math.random() * 5}s`;
+                el.style.animationDuration = `${4 + Math.random() * 4}s`;
+                container.appendChild(el);
+            }
+        }
+        createHomeAnimation();
+
+        // --- 실험실 로직 ---
+        window.startSimulation = function() {
+            const nameInput = document.getElementById('student-name').value.trim();
+            if(!nameInput) {
+                // 커스텀 모달 또는 간단히 인풋 테두리 빨갛게
+                const inputEl = document.getElementById('student-name');
+                inputEl.classList.add('border-red-500', 'ring-1', 'ring-red-500');
+                setTimeout(() => inputEl.classList.remove('border-red-500', 'ring-1', 'ring-red-500'), 1500);
                 return;
             }
 
-            generation++;
-            let newBacteria = [];
-            
-            // Each bacterium tries to reproduce
-            for (let b of bacteria) {
-                // If we hit capacity, stop reproducing
-                if (bacteria.length + newBacteria.length >= MAX_POP) break;
-                
-                // Offspring inherits resistance, but has mutation chance if not already resistant
-                let isOffspringResistant = b.isResistant;
-                if (!b.isResistant && Math.random() < MUTATION_RATE) {
-                    isOffspringResistant = true; // Mutation occurs!
-                }
+            simState = {
+                name: nameInput,
+                generation: 1,
+                normal: 90,  // 초기 일반 세균
+                resistant: 10, // 초기 내성 세균
+                isActive: true
+            };
 
-                // Offspring spawns near parent
-                let nx = b.x + (Math.random() - 0.5) * 20;
-                let ny = b.y + (Math.random() - 0.5) * 20;
-                newBacteria.push(new Bacterium(nx, ny, isOffspringResistant));
-            }
+            document.getElementById('setup-section').classList.add('hidden');
+            document.getElementById('simulation-section').classList.remove('hidden');
+            document.getElementById('sim-user-display').innerText = `${simState.name}의 배양 접시`;
             
-            bacteria = bacteria.concat(newBacteria);
-            updateDashboard();
-            recordData();
+            updateSimulationUI();
+            saveDataToCloud();
         }
 
-        function applyAntibiotic() {
-            // Visual effect: Flash background
-            const originalBg = canvas.style.backgroundColor;
-            canvas.style.backgroundColor = '#fecaca'; // light red
-            setTimeout(() => { canvas.style.backgroundColor = originalBg; }, 300);
+        window.resetSimulation = function() {
+            document.getElementById('setup-section').classList.remove('hidden');
+            document.getElementById('simulation-section').classList.add('hidden');
+            document.getElementById('student-name').value = '';
+            simState.isActive = false;
+        }
 
-            // Filter bacteria: Normal die (mostly), Resistant survive
-            bacteria = bacteria.filter(b => {
-                if (b.isResistant) {
-                    return true; // 100% survival for resistant
-                } else {
-                    return Math.random() < 0.1; // 10% survival for normal (chance)
-                }
-            });
+        // 항생제 투여 (자연선택압 부여)
+        window.applyAntibiotic = function() {
+            if(simState.normal === 0 && simState.resistant === 0) return;
+
+            // 일반 세균은 90% 사망, 내성 세균은 5% 사망 (확률적용)
+            simState.normal = Math.floor(simState.normal * 0.1); 
+            simState.resistant = Math.floor(simState.resistant * 0.95);
             
-            updateDashboard();
-            // Don't advance generation, just record the environment change state
+            updateSimulationUI();
+            saveDataToCloud();
         }
 
-        function updateDashboard() {
-            document.getElementById('gen-counter').innerText = generation;
-            document.getElementById('pop-counter').innerText = bacteria.length;
-        }
+        // 세균 번식
+        window.reproduceBacteria = function() {
+            const currentTotal = simState.normal + simState.resistant;
+            if (currentTotal === 0) return; // 다 죽었으면 번식 불가
 
-        function resetTable() {
-            const tbody = document.getElementById('data-table-body');
-            tbody.innerHTML = '';
-            recordData(true); // Record initial state
-        }
+            // 세대 증가
+            simState.generation += 1;
 
-        function recordData(isInitial = false) {
-            const normalCount = bacteria.filter(b => !b.isResistant).length;
-            const resCount = bacteria.filter(b => b.isResistant).length;
-            const total = bacteria.length;
-            const resPercent = total === 0 ? 0 : Math.round((resCount / total) * 100);
-
-            const tbody = document.getElementById('data-table-body');
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td class="border border-gray-200 p-2 text-sm">${generation}</td>
-                <td class="border border-gray-200 p-2 text-sm">${total}</td>
-                <td class="border border-gray-200 p-2 text-sm text-blue-600 font-medium">${normalCount}</td>
-                <td class="border border-gray-200 p-2 text-sm text-red-500 font-medium">${resCount}</td>
-                <td class="border border-gray-200 p-2 text-sm font-bold ${resPercent > 50 ? 'text-red-500' : ''}">${resPercent}%</td>
-            `;
-            
-            if (isInitial) {
-                tbody.appendChild(row);
+            if (currentTotal >= MAX_BACTERIA) {
+                // 이미 꽉 찼으면 더 안 늘어남
             } else {
-                tbody.insertBefore(row, tbody.firstChild);
+                // 배양 접시(환경) 용량만큼 남은 공간 채우기
+                const spaceLeft = MAX_BACTERIA - currentTotal;
+                
+                // 현재 비율대로 남은 공간을 분배하여 증식
+                const ratioNormal = simState.normal / currentTotal;
+                
+                const newNormal = Math.round(spaceLeft * ratioNormal);
+                const newResistant = spaceLeft - newNormal;
+
+                simState.normal += newNormal;
+                simState.resistant += newResistant;
+                
+                // 총합이 MAX를 넘지 않도록 보정
+                if(simState.normal + simState.resistant > MAX_BACTERIA) {
+                   simState.resistant = MAX_BACTERIA - simState.normal;
+                }
+            }
+            
+            updateSimulationUI();
+            saveDataToCloud();
+        }
+
+        function updateSimulationUI() {
+            const total = simState.normal + simState.resistant;
+            
+            // 텍스트 및 게이지 바 업데이트
+            document.getElementById('stat-generation').innerText = `${simState.generation}세대`;
+            document.getElementById('stat-normal').innerText = simState.normal;
+            document.getElementById('stat-resistant').innerText = simState.resistant;
+            
+            const pctNormal = total === 0 ? 0 : (simState.normal / total) * 100;
+            const pctResistant = total === 0 ? 0 : (simState.resistant / total) * 100;
+            
+            document.getElementById('bar-normal').style.width = `${pctNormal}%`;
+            document.getElementById('bar-resistant').style.width = `${pctResistant}%`;
+
+            // 배양 접시(Petri dish) 시각화 업데이트
+            renderPetriDish();
+        }
+
+        function renderPetriDish() {
+            const dish = document.getElementById('petri-dish');
+            dish.innerHTML = '';
+            
+            // 둥근 배양 접시 안에 랜덤하게 배치 (반지름 계산하여 원형 영역 내에만 생성)
+            const radius = 45; // % 기준
+            const center = 50; // % 기준
+
+            function createBugs(count, typeClass) {
+                for(let i=0; i<count; i++) {
+                    const el = document.createElement('div');
+                    el.className = `bug ${typeClass}`;
+                    
+                    // 극좌표계를 이용해 원 안에 랜덤 배치
+                    const r = Math.sqrt(Math.random()) * radius;
+                    const theta = Math.random() * 2 * Math.PI;
+                    
+                    const x = center + r * Math.cos(theta);
+                    const y = center + r * Math.sin(theta);
+                    
+                    el.style.left = `calc(${x}% - 6px)`; // -6px는 세균 크기의 절반
+                    el.style.top = `calc(${y}% - 6px)`;
+                    
+                    // 약간의 랜덤 딜레이로 생성 애니메이션 효과
+                    el.style.opacity = '0';
+                    el.style.transform = 'scale(0)';
+                    dish.appendChild(el);
+                    
+                    setTimeout(() => {
+                        el.style.opacity = '1';
+                        el.style.transform = 'scale(1)';
+                    }, Math.random() * 300);
+                }
+            }
+
+            createBugs(simState.normal, 'normal');
+            createBugs(simState.resistant, 'resistant');
+        }
+
+
+        // 1. 내 실험 데이터 저장하기
+        async function saveDataToCloud() {
+            if(!isFirebaseReady || !currentUserId) return;
+
+            // MANDATORY RULE 1: 정확한 경로 사용
+            const path = `artifacts/${appId}/public/data/simulations`;
+            const docRef = doc(db, path, currentUserId);
+            
+            try {
+                await setDoc(docRef, {
+                    name: simState.name,
+                    generation: simState.generation,
+                    normal: simState.normal,
+                    resistant: simState.resistant,
+                    timestamp: serverTimestamp(),
+                    updatedAt: new Date().toISOString()
+                });
+            } catch (error) {
+                console.error("데이터 저장 실패:", error);
             }
         }
 
-        function animate() {
-            // Clear canvas
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        // 2. 선생님 대시보드 실시간 연동
+        function listenToSimulations() {
+            if(!isFirebaseReady) return;
+
+            const path = `artifacts/${appId}/public/data/simulations`;
+            const colRef = collection(db, path);
             
-            // Update and draw bacteria
-            for (let b of bacteria) {
-                b.update(canvas.width, canvas.height);
-                b.draw(ctx);
+            // MANDATORY RULE 2: 복잡한 쿼리(orderBy 등) 사용 지양. 클라이언트에서 정렬.
+            onSnapshot(colRef, (snapshot) => {
+                const results = [];
+                snapshot.forEach(doc => {
+                    results.push({ id: doc.id, ...doc.data() });
+                });
+
+                // 업데이트 시간 최신순으로 정렬 (JS 메모리 상에서)
+                results.sort((a, b) => {
+                    const timeA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+                    const timeB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+                    return timeB - timeA;
+                });
+
+                renderDashboard(results);
+
+            }, (error) => {
+                console.error("대시보드 리스너 에러:", error);
+            });
+        }
+
+        // 대시보드 UI 렌더링
+        function renderDashboard(dataList) {
+            const tbody = document.getElementById('dashboard-table-body');
+            
+            if(dataList.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-8 text-center text-gray-500">아직 실험을 시작한 학생이 없습니다.</td></tr>`;
+                return;
             }
+
+            tbody.innerHTML = '';
             
-            animationId = requestAnimationFrame(animate);
+            dataList.forEach(data => {
+                const total = data.normal + data.resistant;
+                const pctNormal = total === 0 ? 0 : (data.normal / total) * 100;
+                const pctResistant = total === 0 ? 0 : (data.resistant / total) * 100;
+                
+                // 시간 포맷팅
+                let timeStr = "방금 전";
+                if(data.updatedAt) {
+                    const date = new Date(data.updatedAt);
+                    timeStr = `${date.getHours().toString().padStart(2,'0')}:${date.getMinutes().toString().padStart(2,'0')}:${date.getSeconds().toString().padStart(2,'0')}`;
+                }
+
+                // 내 데이터인지 확인하여 배경색 하이라이트
+                const isMe = data.id === currentUserId;
+                const trClass = isMe ? "bg-blue-50/30" : "hover:bg-gray-50";
+                const nameTag = isMe ? `<span class="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded ml-2">나</span>` : "";
+
+                const row = `
+                    <tr class="${trClass}">
+                        <td class="px-6 py-4 font-medium text-gray-900">${data.name || '익명'}${nameTag}</td>
+                        <td class="px-6 py-4 text-center"><span class="bg-gray-100 px-2 py-1 rounded text-xs font-bold">${data.generation}세대</span></td>
+                        <td class="px-6 py-4 text-center text-blue-600 font-medium">${data.normal}</td>
+                        <td class="px-6 py-4 text-center text-red-600 font-medium">${data.resistant}</td>
+                        <td class="px-6 py-4">
+                            <div class="flex h-3 w-full bg-gray-200 rounded-full overflow-hidden">
+                                <div style="width: ${pctNormal}%" class="bg-blue-500"></div>
+                                <div style="width: ${pctResistant}%" class="bg-red-500"></div>
+                            </div>
+                            <div class="flex justify-between text-[10px] text-gray-400 mt-1">
+                                <span>${pctNormal.toFixed(0)}%</span>
+                                <span>${pctResistant.toFixed(0)}%</span>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 text-right text-xs text-gray-400 font-mono">${timeStr}</td>
+                    </tr>
+                `;
+                tbody.insertAdjacentHTML('beforeend', row);
+            });
         }
 
     </script>
